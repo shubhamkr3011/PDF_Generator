@@ -76,25 +76,109 @@ def manage_trips_and_guests(all_hotels: list):
             member['gender'] = c3.selectbox("Gender", ["Male", "Female", "Other"], key=f"fam_gender_{i}")
             c4.button("❌", key=f"rem_fam_{i}", on_click=remove_family, args=(i,), help="Remove guest")
 
+# def display_past_records(supabase: Client):
+#     # This function remains unchanged
+#     st.markdown("---")
+#     st.header("Previously Generated Records")
+#     try:
+#         response = supabase.table("travel_records").select("*").order("created_at", desc=True).limit(10).execute()
+#         if response.data:
+#             df = pd.DataFrame(response.data)
+#             def format_trips(trip_list):
+#                 if not isinstance(trip_list, list) or not trip_list: return "N/A"
+#                 # This could be improved to show more trip details from the JSON if needed
+#                 countries = [t.get('country', 'N/A') for t in trip_list]
+#                 return ", ".join(countries)
+#             df['trips'] = df['trips'].apply(format_trips)
+            
+#             url_cols = {col: st.column_config.LinkColumn(display_text="🔗 Link") for col in df.columns if col.endswith('_url')}
+            
+#             st.data_editor(df, column_config=url_cols, use_container_width=True, hide_index=True, disabled=True,
+#                            column_order=("created_at", "passenger_name", "trips", "selected_hotel", "flight_ticket_url", "hotel_booking_url", "itinerary_url", "cover_letter_url"))
+#         else:
+#             st.info("No records found yet.")
+#     except Exception as e:
+#         st.error(f"Could not fetch past records: {e}")
+# In ui_components.py, replace the existing function with this one.
+
+# In ui_components.py, replace the existing function with this one.
+
 def display_past_records(supabase: Client):
-    # This function remains unchanged
+    """Fetches and displays a detailed, explicitly ordered view of past travel records."""
     st.markdown("---")
     st.header("Previously Generated Records")
     try:
         response = supabase.table("travel_records").select("*").order("created_at", desc=True).limit(10).execute()
         if response.data:
             df = pd.DataFrame(response.data)
+
+            # --- Data Preparation ---
+            df['created_at'] = pd.to_datetime(df['created_at'], errors='coerce')
+
             def format_trips(trip_list):
                 if not isinstance(trip_list, list) or not trip_list: return "N/A"
-                # This could be improved to show more trip details from the JSON if needed
                 countries = [t.get('country', 'N/A') for t in trip_list]
-                return ", ".join(countries)
+                return ", ".join(countries) if countries else "N/A"
+
+            def format_guests(guest_list):
+                if not isinstance(guest_list, list) or not guest_list: return "None"
+                guest_names = [g.get('name', 'N/A') for g in guest_list]
+                return ", ".join(guest_names) if guest_names else "None"
+
             df['trips'] = df['trips'].apply(format_trips)
+            df['Guests'] = df['family_members'].apply(format_guests) if 'family_members' in df.columns else "None"
+
+            # --- Column Configuration & Ordering ---
             
-            url_cols = {col: st.column_config.LinkColumn(display_text="🔗 Link") for col in df.columns if col.endswith('_url')}
-            
-            st.data_editor(df, column_config=url_cols, use_container_width=True, hide_index=True, disabled=True,
-                           column_order=("created_at", "passenger_name", "trips", "selected_hotel", "flight_ticket_url", "hotel_booking_url", "itinerary_url", "cover_letter_url"))
+            # 1. Define the exact order and list of all columns you want to display.
+            # This list explicitly pulls all 12+ columns.
+            FINAL_COLUMN_ORDER = [
+                # Core Information
+                "created_at", "passenger_name", "trips", "Guests", "selected_hotel",
+                
+                # PDF Document Links
+                "pdf_flight_ticket_url", "pdf_hotel_booking_url", 
+                "pdf_itinerary_url", "pdf_cover_letter_url",
+                
+                # HTML Document Links
+                "html_flight_url", "html_hotel_url", 
+                "html_itinerary_url", "html_cover_letter_url",
+            ]
+
+            # 2. Filter the DataFrame to only include columns that actually exist in your data.
+            # This prevents errors if a column name has a typo or doesn't exist.
+            columns_to_display = [col for col in FINAL_COLUMN_ORDER if col in df.columns]
+
+            # 3. Define how each column should look.
+            column_config = {
+                # Info Columns
+                "created_at": st.column_config.DatetimeColumn("Created On", format="DD MMM YYYY, h:mm A"),
+                "passenger_name": "Applicant Name",
+                "trips": "Itinerary",
+                "selected_hotel": "Selected Hotel(s)",
+                
+                # PDF Link Columns
+                "pdf_flight_ticket_url": st.column_config.LinkColumn("PDF Flight Ticket", display_text="🔗 PDF"),
+                "pdf_hotel_booking_url": st.column_config.LinkColumn("PDF Hotel Booking", display_text="🔗 PDF"),
+                "pdf_itinerary_url": st.column_config.LinkColumn("PDF Itinerary", display_text="🔗 PDF"),
+                "pdf_cover_letter_url": st.column_config.LinkColumn("PDF Cover Letter", display_text="🔗 PDF"),
+
+                # HTML Link Columns
+                "html_flight_url": st.column_config.LinkColumn("HTML Flight Ticket", display_text="🌐 HTML"),
+                "html_hotel_url": st.column_config.LinkColumn("HTML Hotel Booking", display_text="🌐 HTML"),
+                "html_itinerary_url": st.column_config.LinkColumn("HTML Itinerary", display_text="🌐 HTML"),
+                "html_cover_letter_url": st.column_config.LinkColumn("HTML Cover Letter", display_text="🌐 HTML"),
+            }
+
+            st.data_editor(
+                df,
+                column_config=column_config,
+                use_container_width=True,
+                hide_index=True,
+                disabled=True,
+                # Use the filtered and ordered list of columns to display
+                column_order=columns_to_display
+            )
         else:
             st.info("No records found yet.")
     except Exception as e:
