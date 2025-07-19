@@ -24,7 +24,7 @@ with st.form("travel_form"):
     st.header("Applicant Information")
     c1, c2, c3, c4 = st.columns(4)
     passenger_name = c1.text_input("Full Name*", placeholder="John Doe")
-    hometown = c2.text_input("Hometown*", placeholder="New York")
+    hometown = c2.text_input("From*", placeholder="New York")
     age = c3.number_input("Age*", min_value=1, step=1)
     gender = c4.selectbox("Gender", ["Male", "Female", "Other"])
 
