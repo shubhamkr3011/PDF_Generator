@@ -1,0 +1,8 @@
+streamlit
+supabase
+pandas
+fpdf2
+groq
+qrcode
+Pillow
+python-barcode
